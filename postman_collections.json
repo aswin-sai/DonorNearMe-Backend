@@ -1,0 +1,149 @@
+{
+  "info": {
+    "name": "Donor Near Me API",
+    "_postman_id": "12345-67890-abcdef",
+    "description": "Postman collection for testing the Donor Near Me API endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_name\": \"testuser\",\n  \"password\": \"password123\",\n  \"role\": \"Donor\",\n  \"user_email\": \"testuser@example.com\",\n  \"user_phone_number\": \"1234567890\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/auth/register",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Hospital",
+      "item": [
+        {
+          "name": "Register Hospital",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"City Hospital\",\n  \"address\": \"123 Main St\",\n  \"phone\": \"1234567890\",\n  \"email\": \"hospital@example.com\",\n  \"password\": \"password123\",\n  \"role_id\": 2,\n  \"blood_group_id\": 1\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/hospital/register",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["hospital", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Hospitals",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/hospital/list",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["hospital", "list"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Blood",
+      "item": [
+        {
+          "name": "Create Blood Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_name\": \"John Doe\",\n  \"patient_contact\": \"9876543210\",\n  \"blood_group_id\": 1,\n  \"hospital_id\": 1\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/blood/request",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["blood", "request"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Blood Requests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/blood/requests",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["blood", "requests"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
