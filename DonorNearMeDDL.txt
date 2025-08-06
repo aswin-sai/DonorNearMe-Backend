@@ -1,0 +1,325 @@
+-- Table: public.blood_requests
+
+-- DROP TABLE IF EXISTS public.blood_requests;
+
+CREATE TABLE IF NOT EXISTS public.blood_requests
+(
+    blood_request_id integer NOT NULL DEFAULT nextval('blood_requests_blood_request_id_seq'::regclass),
+    user_id integer NOT NULL,
+    hospital_id integer NOT NULL,
+    blood_group_type integer NOT NULL,
+    no_of_units integer NOT NULL,
+    patient_name character varying(120) COLLATE pg_catalog."default" NOT NULL,
+    patient_contact_email character varying(120) COLLATE pg_catalog."default",
+    patient_contact_phone_number character varying(20) COLLATE pg_catalog."default",
+    required_by_date date,
+    description text COLLATE pg_catalog."default",
+    status character varying(20) COLLATE pg_catalog."default" DEFAULT 'pending'::character varying,
+    from_date date,
+    to_date date,
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone,
+    CONSTRAINT blood_requests_pkey PRIMARY KEY (blood_request_id),
+    CONSTRAINT blood_requests_blood_group_type_fkey FOREIGN KEY (blood_group_type)
+        REFERENCES public.lookup_blood_groups (blood_group_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT blood_requests_hospital_id_fkey FOREIGN KEY (hospital_id)
+        REFERENCES public.hospitals (hospital_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT blood_requests_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.blood_requests
+    OWNER to postgres;
+
+
+
+-- Table: public.blood_requests_responses
+
+-- DROP TABLE IF EXISTS public.blood_requests_responses;
+
+CREATE TABLE IF NOT EXISTS public.blood_requests_responses
+(
+    blood_requests_response_id integer NOT NULL DEFAULT nextval('blood_requests_responses_blood_requests_response_id_seq'::regclass),
+    blood_request_id integer NOT NULL,
+    user_id integer NOT NULL,
+    response_status text COLLATE pg_catalog."default" NOT NULL,
+    message text COLLATE pg_catalog."default",
+    from_date date NOT NULL,
+    responded_date date,
+    to_date date,
+    scheduled_datetime timestamp without time zone,
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone,
+    CONSTRAINT blood_requests_responses_pkey PRIMARY KEY (blood_requests_response_id),
+    CONSTRAINT blood_requests_responses_blood_request_id_fkey FOREIGN KEY (blood_request_id)
+        REFERENCES public.blood_requests (blood_request_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT blood_requests_responses_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.blood_requests_responses
+    OWNER to postgres;
+
+
+
+
+-- Table: public.donations
+
+-- DROP TABLE IF EXISTS public.donations;
+
+CREATE TABLE IF NOT EXISTS public.donations
+(
+    id integer NOT NULL DEFAULT nextval('donations_id_seq'::regclass),
+    user_id integer NOT NULL,
+    blood_request_id integer,
+    scheduled_date timestamp without time zone NOT NULL,
+    status character varying(20) COLLATE pg_catalog."default" DEFAULT 'scheduled'::character varying,
+    certificate character varying(255) COLLATE pg_catalog."default",
+    created_at timestamp without time zone,
+    CONSTRAINT donations_pkey PRIMARY KEY (id),
+    CONSTRAINT donations_blood_request_id_fkey FOREIGN KEY (blood_request_id)
+        REFERENCES public.blood_requests (blood_request_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT donations_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.donations
+    OWNER to postgres;
+
+
+
+
+-- Table: public.hospital_blood_availability
+
+-- DROP TABLE IF EXISTS public.hospital_blood_availability;
+
+CREATE TABLE IF NOT EXISTS public.hospital_blood_availability
+(
+    hospital_id integer NOT NULL,
+    blood_group_id integer NOT NULL,
+    no_of_units integer NOT NULL,
+    from_date date NOT NULL,
+    to_date date,
+    CONSTRAINT hospital_blood_availability_pkey PRIMARY KEY (hospital_id, blood_group_id),
+    CONSTRAINT hospital_blood_availability_blood_group_id_fkey FOREIGN KEY (blood_group_id)
+        REFERENCES public.lookup_blood_groups (blood_group_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT hospital_blood_availability_hospital_id_fkey FOREIGN KEY (hospital_id)
+        REFERENCES public.hospitals (hospital_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.hospital_blood_availability
+    OWNER to postgres;
+
+
+
+-- Table: public.hospitals
+
+-- DROP TABLE IF EXISTS public.hospitals;
+
+CREATE TABLE IF NOT EXISTS public.hospitals
+(
+    hospital_id integer NOT NULL DEFAULT nextval('hospitals_hospital_id_seq'::regclass),
+    hospital_name character varying(120) COLLATE pg_catalog."default" NOT NULL,
+    hospital_address character varying(255) COLLATE pg_catalog."default",
+    hospital_address_lat double precision,
+    hospital_address_long double precision,
+    hospital_gmap_link character varying(500) COLLATE pg_catalog."default",
+    has_blood_bank boolean DEFAULT false,
+    hospital_contact_number character varying(20) COLLATE pg_catalog."default",
+    hospital_email_id character varying(120) COLLATE pg_catalog."default",
+    hospital_contact_person character varying(120) COLLATE pg_catalog."default",
+    hospital_pincode character varying(10) COLLATE pg_catalog."default",
+    hospital_type character varying(50) COLLATE pg_catalog."default",
+    from_date date NOT NULL,
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone,
+    to_date date,
+    CONSTRAINT hospitals_pkey PRIMARY KEY (hospital_id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.hospitals
+    OWNER to postgres;
+
+
+
+-- Table: public.lookup_blood_groups
+
+-- DROP TABLE IF EXISTS public.lookup_blood_groups;
+
+CREATE TABLE IF NOT EXISTS public.lookup_blood_groups
+(
+    blood_group_id integer NOT NULL DEFAULT nextval('lookup_blood_groups_blood_group_id_seq'::regclass),
+    blood_group_name text COLLATE pg_catalog."default" NOT NULL,
+    from_date date NOT NULL,
+    to_date date,
+    CONSTRAINT lookup_blood_groups_pkey PRIMARY KEY (blood_group_id),
+    CONSTRAINT lookup_blood_groups_blood_group_name_key UNIQUE (blood_group_name)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.lookup_blood_groups
+    OWNER to postgres;
+
+
+
+-- Table: public.lookup_roles
+
+-- DROP TABLE IF EXISTS public.lookup_roles;
+
+CREATE TABLE IF NOT EXISTS public.lookup_roles
+(
+    lookup_role_id integer NOT NULL DEFAULT nextval('lookup_roles_lookup_role_id_seq'::regclass),
+    lookup_role_name text COLLATE pg_catalog."default" NOT NULL,
+    from_date date NOT NULL,
+    to_date date,
+    CONSTRAINT lookup_roles_pkey PRIMARY KEY (lookup_role_id),
+    CONSTRAINT lookup_roles_lookup_role_name_key UNIQUE (lookup_role_name)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.lookup_roles
+    OWNER to postgres;
+
+
+
+-- Table: public.notifications
+
+-- DROP TABLE IF EXISTS public.notifications;
+
+CREATE TABLE IF NOT EXISTS public.notifications
+(
+    id integer NOT NULL DEFAULT nextval('notifications_id_seq'::regclass),
+    user_id integer NOT NULL,
+    message character varying(255) COLLATE pg_catalog."default" NOT NULL,
+    is_read boolean DEFAULT false,
+    action_url character varying(255) COLLATE pg_catalog."default",
+    created_at timestamp without time zone,
+    CONSTRAINT notifications_pkey PRIMARY KEY (id),
+    CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.notifications
+    OWNER to postgres;
+
+
+
+-- Table: public.user_device_tokens
+
+-- DROP TABLE IF EXISTS public.user_device_tokens;
+
+CREATE TABLE IF NOT EXISTS public.user_device_tokens
+(
+    user_id integer NOT NULL,
+    firebase_device_token text COLLATE pg_catalog."default" NOT NULL,
+    platform text COLLATE pg_catalog."default" NOT NULL,
+    last_seen_date timestamp without time zone,
+    CONSTRAINT user_device_tokens_pkey PRIMARY KEY (user_id, firebase_device_token),
+    CONSTRAINT user_device_tokens_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.user_device_tokens
+    OWNER to postgres;
+
+
+-- Table: public.user_hospital_admin_lineage
+
+-- DROP TABLE IF EXISTS public.user_hospital_admin_lineage;
+
+CREATE TABLE IF NOT EXISTS public.user_hospital_admin_lineage
+(
+    user_id integer NOT NULL,
+    hospital_id integer NOT NULL,
+    from_date date NOT NULL,
+    to_date date,
+    CONSTRAINT user_hospital_admin_lineage_pkey PRIMARY KEY (user_id, hospital_id),
+    CONSTRAINT user_hospital_admin_lineage_hospital_id_fkey FOREIGN KEY (hospital_id)
+        REFERENCES public.hospitals (hospital_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT user_hospital_admin_lineage_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (user_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.user_hospital_admin_lineage
+    OWNER to postgres;
+
+
+-- Table: public.users
+
+-- DROP TABLE IF EXISTS public.users;
+
+CREATE TABLE IF NOT EXISTS public.users
+(
+    user_id integer NOT NULL DEFAULT nextval('users_user_id_seq'::regclass),
+    user_name text COLLATE pg_catalog."default" NOT NULL,
+    blood_group character varying(5) COLLATE pg_catalog."default",
+    address text COLLATE pg_catalog."default",
+    pincode character varying(10) COLLATE pg_catalog."default",
+    user_email text COLLATE pg_catalog."default" NOT NULL,
+    user_phone_number character varying(15) COLLATE pg_catalog."default" NOT NULL,
+    password character varying(256) COLLATE pg_catalog."default" NOT NULL,
+    user_role_id integer NOT NULL,
+    from_date date NOT NULL,
+    to_date date,
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone,
+    CONSTRAINT users_pkey PRIMARY KEY (user_id),
+    CONSTRAINT users_user_email_key UNIQUE (user_email),
+    CONSTRAINT users_user_phone_number_key UNIQUE (user_phone_number),
+    CONSTRAINT users_user_role_id_fkey FOREIGN KEY (user_role_id)
+        REFERENCES public.lookup_roles (lookup_role_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.users
+    OWNER to postgres;
+
+
+
