@@ -157,9 +157,9 @@ def login():
         logging.error("Invalid password")
         return jsonify({'success': False, 'message': 'Invalid password'}), 401
 
-    # Create token with user_id as identity (not a dict)
+    # 🔧 FIX: Create token with user_id as STRING identity
     access_token = create_access_token(
-        identity=user.user_id,
+        identity=str(user.user_id),  # Convert to string - this fixes the "Subject must be a string" error
         expires_delta=timedelta(hours=1)
     )
 
@@ -167,8 +167,11 @@ def login():
     return jsonify({
         'success': True, 
         'message': 'Login successful', 
-        'access_token': access_token,
-        'token': access_token  # Keep both for compatibility
+        'data': {  # Add data wrapper for consistency
+            'access_token': access_token,
+            'token': access_token,  # Keep both for compatibility
+            'user': user.to_dict()  # Include user data
+        }
     }), 200
 
 @auth_bp.route('/protected', methods=['GET'])
@@ -214,8 +217,9 @@ def hospital_admin_login():
         logging.error("Invalid password for hospital admin login")
         return jsonify({'success': False, 'message': 'Invalid password'}), 401
 
+    # 🔧 FIX: Create token with user_id as STRING identity
     access_token = create_access_token(
-        identity=user.user_id,
+        identity=str(user.user_id),  # Convert to string - this fixes the "Subject must be a string" error
         expires_delta=timedelta(hours=1)
     )
 
@@ -233,7 +237,9 @@ def hospital_admin_login():
     return jsonify({
         'success': True,
         'message': 'Hospital admin login successful',
-        'access_token': access_token,
-        'token': access_token,
-        'user': user_dict
+        'data': {  # Add data wrapper for consistency
+            'access_token': access_token,
+            'token': access_token,
+            'user': user_dict
+        }
     }), 200

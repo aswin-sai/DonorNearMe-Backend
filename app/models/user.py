@@ -46,7 +46,7 @@ class User(BaseModel):
 
     def to_dict(self):
         """Convert user to dictionary excluding sensitive data"""
-        return {
+        data = {
             'user_id': self.user_id,
             'user_name': self.user_name,
             'user_email': self.user_email,
@@ -60,6 +60,14 @@ class User(BaseModel):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+        # Add hospital linkage for admins
+        admin_lineages = getattr(self, 'admin_lineages', [])
+        if admin_lineages:
+            data['user_hospital_admin_lineage'] = [
+                {'hospital_id': lineage.hospital_id}
+                for lineage in admin_lineages
+            ]
+        return data
 
     def is_hospital_admin(self):
         """Check if user is a hospital admin"""

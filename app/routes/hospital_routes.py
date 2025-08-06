@@ -1,3 +1,4 @@
+print("[DEBUG] app/routes/hospital_routes.py loaded")
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Hospital, HospitalBloodAvailability, LookupBloodGroup, UserHospitalAdminLineage, BloodRequest
@@ -60,26 +61,37 @@ def register_hospital():
 
 @hospital_bp.route('/list', methods=['GET'])
 def list_hospitals():
+    print("[DEBUG] /hospital/list endpoint called")
     try:
         hospitals = Hospital.query.all()
         result = []
-        for hospital in hospitals:
-            result.append({
-                'hospital_id': hospital.hospital_id,
-                'hospital_name': hospital.hospital_name,
-                'hospital_address': hospital.hospital_address,
-                'hospital_contact_number': hospital.hospital_contact_number,
-                'hospital_email_id': hospital.hospital_email_id,
-                'hospital_contact_person': hospital.hospital_contact_person,
-                'hospital_pincode': hospital.hospital_pincode,
-                'hospital_type': hospital.hospital_type,
-                'has_blood_bank': hospital.has_blood_bank,
-                'from_date': hospital.from_date.isoformat() if hospital.from_date else None,
-                'to_date': hospital.to_date.isoformat() if hospital.to_date else None
-            })
+        print("[DEBUG] Hospitals type:", type(hospitals))
+        for i, hospital in enumerate(hospitals):
+            print(f"[DEBUG] Index {i}: type={type(hospital)}, value={hospital}")
+            if isinstance(hospital, list):
+                print(f"[DEBUG] Skipping list at index {i}: {hospital}")
+                continue
+            try:
+                result.append({
+                    'hospital_id': hospital.hospital_id,
+                    'hospital_name': hospital.hospital_name,
+                    'hospital_address': hospital.hospital_address,
+                    'hospital_contact_number': hospital.hospital_contact_number,
+                    'hospital_email_id': hospital.hospital_email_id,
+                    'hospital_contact_person': hospital.hospital_contact_person,
+                    'hospital_pincode': hospital.hospital_pincode,
+                    'hospital_type': hospital.hospital_type,
+                    'has_blood_bank': hospital.has_blood_bank,
+                    'from_date': hospital.from_date.isoformat() if hospital.from_date else None,
+                    'to_date': hospital.to_date.isoformat() if hospital.to_date else None
+                })
+            except Exception as inner_e:
+                print(f"[DEBUG] Error serializing hospital at index {i}: {inner_e}")
+                continue
+        print(f"[DEBUG] Returning {len(result)} hospitals")
         return jsonify(result), 200
-        
     except Exception as e:
+        print(f"[DEBUG] Exception in /hospital/list: {e}")
         return jsonify({'error': str(e)}), 500
 
 @hospital_bp.route('/<int:hospital_id>', methods=['GET'])

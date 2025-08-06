@@ -5,7 +5,7 @@ from models.blood_request import BloodRequest, BloodRequestResponse
 from models.user import User
 from models.hospital import Hospital
 from models.lookup import LookupBloodGroup
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from sqlalchemy import and_
 from schemas import BloodRequestSchema, BloodRequestResponseSchema
 from marshmallow import ValidationError
@@ -20,102 +20,174 @@ blood_request_response_schema = BloodRequestResponseSchema()
 @blood_bp.route('/request', methods=['POST'])
 @jwt_required()
 def create_blood_request():
+    print("\n" + "="*50)
+    print("CREATE BLOOD REQUEST ENDPOINT CALLED")
+    print("="*50)
+    
     try:
-        current_user_id = get_jwt_identity()
+        # Get current user ID from JWT with better error handling
+        try:
+            current_user_id = get_jwt_identity()
+            print(f"[DEBUG] JWT identity raw: {current_user_id} (type: {type(current_user_id)})")
+            
+            # Convert to integer if it's a string
+            if isinstance(current_user_id, str):
+                current_user_id = int(current_user_id)
+            
+            print(f"[DEBUG] Current user ID processed: {current_user_id} (type: {type(current_user_id)})")
+        except Exception as jwt_error:
+            print(f"[DEBUG] JWT Error: {jwt_error}")
+            return jsonify({'error': f'JWT authentication failed: {str(jwt_error)}'}), 401
+        
+        # Get request data
         data = request.get_json()
+        print(f"[DEBUG] Received raw data: {data}")
+        print(f"[DEBUG] Request headers: {dict(request.headers)}")
+        print(f"[DEBUG] Request method: {request.method}")
+        print(f"[DEBUG] Request URL: {request.url}")
+        
         if not data:
+            print("[DEBUG] No data provided")
             return jsonify({'error': 'No data provided'}), 400
+        
+        # Log all required fields
+        required_fields = ['hospital_id', 'blood_group_type', 'no_of_units', 'patient_name', 'required_by_date']
+        for field in required_fields:
+            print(f"[DEBUG] {field}: {data.get(field)} (type: {type(data.get(field))})")
+        
         # Validate input data using Marshmallow schema
         try:
             validated_data = blood_request_schema.load(data)
+            print(f"[DEBUG] Validated data: {validated_data}")
         except ValidationError as err:
-            return jsonify({'error': 'Validation failed', 'details': err.messages}), 400
-        # Try to get hospital_id from hospital admin user
-        hospital = Hospital.query.filter_by(admin_user_id=current_user_id).first()
-        if not hospital:
-            # Fallback: try to find by user_id if admin_user_id not present
-            hospital = Hospital.query.filter_by(user_id=current_user_id).first()
-        if hospital:
-            hospital_id = hospital.hospital_id
-        else:
-            # Fallback: use hospital_id from request body (for non-admin users)
-            try:
-                hospital_id = int(validated_data['hospital_id'])
-            except (ValueError, TypeError, KeyError):
-                return jsonify({'error': 'Invalid or missing hospital_id'}), 400
+            print(f"[DEBUG] Validation error: {err.messages}")
+            return jsonify({'error': 'Validation failed', 'details': err.messages}), 422
+        except Exception as schema_error:
+            print(f"[DEBUG] Schema error: {schema_error}")
+            return jsonify({'error': f'Schema validation failed: {str(schema_error)}'}), 500
+        
+        # Get hospital_id from request body
+        try:
+            hospital_id = int(validated_data['hospital_id'])
+            print(f"[DEBUG] Hospital ID: {hospital_id}")
+        except (ValueError, TypeError, KeyError) as e:
+            print(f"[DEBUG] Hospital ID conversion error: {e}")
+            return jsonify({'error': f'Invalid or missing hospital_id: {str(e)}'}), 400
+        
         # Validate hospital exists
-        hospital_obj = Hospital.query.get(hospital_id)
-        if not hospital_obj:
-            available_hospitals = Hospital.query.all()
-            hospital_names = [h.hospital_name for h in available_hospitals]
-            return jsonify({
-                'error': f'Hospital with ID {hospital_id} not found. Available hospitals: {", ".join(hospital_names)}'
-            }), 404
+        try:
+            hospital_obj = Hospital.query.get(hospital_id)
+            print(f"[DEBUG] Hospital object: {hospital_obj}")
+            if not hospital_obj:
+                print(f"[DEBUG] Hospital with ID {hospital_id} not found")
+                available_hospitals = Hospital.query.all()
+                hospital_names = [h.hospital_name for h in available_hospitals]
+                print(f"[DEBUG] Available hospitals: {hospital_names}")
+                return jsonify({
+                    'error': f'Hospital with ID {hospital_id} not found. Available hospitals: {", ".join(hospital_names)}'
+                }), 404
+        except Exception as hospital_error:
+            print(f"[DEBUG] Hospital query error: {hospital_error}")
+            return jsonify({'error': f'Hospital validation failed: {str(hospital_error)}'}), 500
         
-        # Handle blood group type (can be string or integer)
+        # Handle blood group type
         blood_group_type = validated_data['blood_group_type']
-        blood_group_id = None
+        print(f"[DEBUG] Blood group type received: {blood_group_type} (type: {type(blood_group_type)})")
         
-        if isinstance(blood_group_type, int):
-            # If it's already an integer, use it directly
-            blood_group_id = blood_group_type
-        else:
-            # If it's a string, look up the blood group by name
-            blood_group = LookupBloodGroup.query.filter(
-                LookupBloodGroup.blood_group_name.ilike(str(blood_group_type))
-            ).first()
-            if blood_group:
-                blood_group_id = blood_group.blood_group_id
+        try:
+            if isinstance(blood_group_type, int):
+                blood_group_id = blood_group_type
+                print(f"[DEBUG] Using blood group ID: {blood_group_id}")
             else:
-                # Get available blood groups for better error message
+                # If it's a string, look up the blood group by name
+                blood_group = LookupBloodGroup.query.filter(
+                    LookupBloodGroup.blood_group_name.ilike(str(blood_group_type))
+                ).first()
+                if blood_group:
+                    blood_group_id = blood_group.blood_group_id
+                    print(f"[DEBUG] Found blood group {blood_group_type} with ID: {blood_group_id}")
+                else:
+                    available_blood_groups = LookupBloodGroup.query.all()
+                    blood_group_names = [bg.blood_group_name for bg in available_blood_groups]
+                    print(f"[DEBUG] Available blood groups: {blood_group_names}")
+                    return jsonify({
+                        'error': f'Blood group "{blood_group_type}" not found. Available blood groups: {", ".join(blood_group_names)}'
+                    }), 404
+            
+            # Validate blood group exists
+            blood_group = LookupBloodGroup.query.get(blood_group_id)
+            if not blood_group:
                 available_blood_groups = LookupBloodGroup.query.all()
                 blood_group_names = [bg.blood_group_name for bg in available_blood_groups]
                 return jsonify({
-                    'error': f'Blood group "{blood_group_type}" not found. Available blood groups: {", ".join(blood_group_names)}'
+                    'error': f'Blood group with ID {blood_group_id} not found. Available blood groups: {", ".join(blood_group_names)}'
                 }), 404
+            
+        except Exception as blood_group_error:
+            print(f"[DEBUG] Blood group processing error: {blood_group_error}")
+            return jsonify({'error': f'Blood group validation failed: {str(blood_group_error)}'}), 500
         
-        # Validate blood group exists
-        blood_group = LookupBloodGroup.query.get(blood_group_id)
-        if not blood_group:
-            available_blood_groups = LookupBloodGroup.query.all()
-            blood_group_names = [bg.blood_group_name for bg in available_blood_groups]
-            return jsonify({
-                'error': f'Blood group with ID {blood_group_id} not found. Available blood groups: {", ".join(blood_group_names)}'
-            }), 404
-        
-        # Normalize status to lowercase
+        # Normalize status
         status = validated_data.get('status', 'pending').lower()
         if status not in ['pending', 'accepted', 'cancelled', 'completed']:
             status = 'pending'
+        print(f"[DEBUG] Final status: {status}")
+        
+        print(f"[DEBUG] Creating blood request with user_id: {current_user_id}")
         
         # Create the blood request
-        blood_request = BloodRequest(
-            user_id=current_user_id,
-            hospital_id=hospital_id,
-            blood_group_type=blood_group_id,
-            no_of_units=validated_data['no_of_units'],
-            patient_name=validated_data['patient_name'],
-            patient_contact_email=validated_data.get('patient_contact_email'),
-            patient_contact_phone_number=validated_data.get('patient_contact_phone_number'),
-            required_by_date=validated_data.get('required_by_date'),
-            description=validated_data.get('description'),
-            status=status,
-            from_date=date.today(),
-            created_date=datetime.now(),
-            updated_date=datetime.now()
-        )
-        
-        db.session.add(blood_request)
-        db.session.commit()
-        
-        return jsonify({
-            'message': 'Blood request created successfully',
-            'blood_request_id': blood_request.blood_request_id
-        }), 201
+        try:
+            blood_request = BloodRequest(
+                user_id=current_user_id,
+                hospital_id=hospital_id,
+                blood_group_type=blood_group_id,
+                no_of_units=validated_data['no_of_units'],
+                patient_name=validated_data['patient_name'],
+                patient_contact_email=validated_data.get('patient_contact_email'),
+                patient_contact_phone_number=validated_data.get('patient_contact_phone_number'),
+                required_by_date=validated_data.get('required_by_date'),
+                description=validated_data.get('description'),
+                status=status,
+                from_date=date.today()
+            )
+            
+            print(f"[DEBUG] Blood request object created: {blood_request}")
+            
+            db.session.add(blood_request)
+            db.session.commit()
+            
+            print(f"[DEBUG] Successfully created blood request with ID: {blood_request.blood_request_id}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Blood request created successfully',
+                'blood_request_id': blood_request.blood_request_id,
+                'data': {
+                    'id': blood_request.blood_request_id,
+                    'patient_name': blood_request.patient_name,
+                    'hospital_id': blood_request.hospital_id,
+                    'status': blood_request.status,
+                    'user_id': blood_request.user_id
+                }
+            }), 201
+            
+        except Exception as creation_error:
+            db.session.rollback()
+            print(f"[DEBUG] Error creating blood request object: {creation_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'Failed to create blood request: {str(creation_error)}'}), 500
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Failed to create blood request: {str(e)}'}), 500
+        print(f"[DEBUG] Unexpected error in create_blood_request: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+    finally:
+        print("="*50)
+        print("CREATE BLOOD REQUEST ENDPOINT FINISHED")
+        print("="*50 + "\n")
 
 # Alias endpoint for /blood-requests (to support frontend)
 @blood_bp.route('/blood-requests', methods=['POST'])
@@ -930,3 +1002,69 @@ def get_hospital_blood_requests():
         return jsonify(result), 200
     except Exception as e:
         return jsonify({'error': f'Failed to get hospital blood requests: {str(e)}'}), 500
+
+@blood_bp.route('/request/test', methods=['POST'])
+def create_test_blood_request():
+    """Test endpoint for blood request creation without authentication"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        print(f"[TEST] Creating test blood request: {data}")
+        
+        # Use default values for missing required fields
+        hospital_id = 1  # Use first hospital from seed data
+        blood_group_id = 1  # Use first blood group (A+)
+        user_id = 1  # Use first user from seed data
+        
+        # Validate hospital exists
+        hospital_obj = Hospital.query.get(hospital_id)
+        if not hospital_obj:
+            return jsonify({'error': f'Test hospital with ID {hospital_id} not found'}), 404
+        
+        # Validate blood group exists
+        blood_group = LookupBloodGroup.query.get(blood_group_id)
+        if not blood_group:
+            return jsonify({'error': f'Test blood group with ID {blood_group_id} not found'}), 404
+        
+        # Create the test blood request with dummy data
+        blood_request = BloodRequest(
+            user_id=user_id,
+            hospital_id=hospital_id,
+            blood_group_type=blood_group_id,
+            no_of_units=data.get('units', 2),
+            patient_name=data.get('patientName', 'Test Patient'),
+            patient_contact_email=data.get('contactEmail', 'test@example.com'),
+            patient_contact_phone_number=data.get('contactNumber', '+1234567890'),
+            required_by_date=date.today() + timedelta(days=7),
+            description=data.get('additionalNotes', 'Test blood request created via test endpoint'),
+            status='pending',
+            from_date=date.today()
+        )
+        
+        db.session.add(blood_request)
+        db.session.commit()
+        
+        print(f"[TEST] Successfully created blood request with ID: {blood_request.blood_request_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Test blood request created successfully',
+            'data': {
+                'blood_request_id': blood_request.blood_request_id,
+                'patient_name': blood_request.patient_name,
+                'hospital_name': hospital_obj.hospital_name,
+                'blood_group_name': blood_group.blood_group_name,
+                'status': blood_request.status,
+                'created_at': blood_request.created_at.isoformat() if blood_request.created_at else None
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"[TEST] Error creating test blood request: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to create test blood request: {str(e)}'
+        }), 500

@@ -4,6 +4,7 @@ jwt = JWTManager()
 
 @jwt.expired_token_loader
 def expired_token_callback(jwt_header, jwt_payload):
+    print("[JWT] Token expired")
     return {
         'status': 'error',
         'message': 'Token has expired'
@@ -11,6 +12,7 @@ def expired_token_callback(jwt_header, jwt_payload):
 
 @jwt.invalid_token_loader
 def invalid_token_callback(error):
+    print(f"[JWT] Invalid token: {error}")
     return {
         'status': 'error',
         'message': 'Invalid token'
@@ -18,6 +20,7 @@ def invalid_token_callback(error):
 
 @jwt.unauthorized_loader
 def missing_token_callback(error):
+    print(f"[JWT] Unauthorized: {error}")
     return {
         'status': 'error',
         'message': 'Authorization token is missing'

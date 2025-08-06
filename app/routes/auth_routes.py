@@ -127,7 +127,7 @@ def login():
 
     # Create token with user_id as identity (not a dict)
     access_token = create_access_token(
-        identity=user.user_id,
+        identity=str(user.user_id),
         expires_delta=timedelta(hours=1)
     )
 
@@ -183,7 +183,7 @@ def hospital_admin_login():
         return jsonify({'success': False, 'message': 'Invalid password'}), 401
 
     access_token = create_access_token(
-        identity=user.user_id,
+        identity=str(user.user_id),
         expires_delta=timedelta(hours=1)
     )
 

@@ -1,0 +1,77 @@
+from flask import Flask, request, jsonify
+from datetime import datetime
+from yourapp import db
+from yourapp.models import BloodRequest
+
+app = Flask(__name__)
+
+# ...existing routes...
+
+@app.route('/api/blood/request/test', methods=['POST'])
+def create_blood_request_test():
+    """Test endpoint for creating blood requests without authentication"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        # Validate required fields
+        required_fields = [
+            'hospital_id', 'blood_group_type', 'no_of_units', 
+            'patient_name', 'patient_contact_email', 
+            'patient_contact_phone_number', 'required_by_date',
+            'description', 'status', 'from_date'
+        ]
+        
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        # Create blood request without authentication (for testing)
+        blood_request = BloodRequest(
+            hospital_id=data['hospital_id'],
+            blood_group_type=data['blood_group_type'],
+            no_of_units=data['no_of_units'],
+            patient_name=data['patient_name'],
+            patient_contact_email=data['patient_contact_email'],
+            patient_contact_phone_number=data['patient_contact_phone_number'],
+            required_by_date=datetime.strptime(data['required_by_date'], '%Y-%m-%d').date(),
+            description=data['description'],
+            status=data['status'],
+            from_date=datetime.strptime(data['from_date'], '%Y-%m-%d').date(),
+            to_date=datetime.strptime(data['to_date'], '%Y-%m-%d').date() if data.get('to_date') else None,
+            user_id=36  # Use a test user ID or extract from your JWT token payload
+        )
+        
+        db.session.add(blood_request)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "blood_request_id": blood_request.id,
+            "message": "Test blood request created successfully",
+            "data": {
+                "id": blood_request.id,
+                "patient_name": blood_request.patient_name,
+                "blood_group_type": blood_request.blood_group_type,
+                "hospital_id": blood_request.hospital_id,
+                "status": blood_request.status
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Test endpoint error: {str(e)}")
+        return jsonify({
+            "error": f"Failed to create test blood request: {str(e)}",
+            "success": False
+        }), 500
+
+# Alternative endpoint without /api prefix
+@app.route('/blood/request/test', methods=['POST'])
+def create_blood_request_test_alt():
+    """Alternative test endpoint without /api prefix"""
+    return create_blood_request_test()
+
+# ...existing code...

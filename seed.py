@@ -161,7 +161,17 @@ def seed():
             ON CONFLICT DO NOTHING;
             """))
 
-            print("Tables created and lookup data seeded successfully.")
+            # Seed Users
+            connection.execute(text("""
+            INSERT INTO users (user_name, password, user_email, user_phone_number, user_role_id, from_date, created_at, updated_at)
+            VALUES
+                ('a', 'a', 'a@a.com', '1111111111', 0, CURRENT_DATE, NOW(), NOW()), -- super admin
+                ('b', 'b', 'b@b.com', '2222222222', 3, CURRENT_DATE, NOW(), NOW()), -- donor
+                ('c', 'c', 'c@c.com', '3333333333', 1, CURRENT_DATE, NOW(), NOW())  -- hospital admin
+            ON CONFLICT (user_email) DO NOTHING;
+            """))
+
+            print("Tables created, lookup data and users seeded successfully.")
 
 if __name__ == '__main__':
     seed()

@@ -33,6 +33,30 @@ class BloodRequest(db.Model):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    @classmethod
+    def create_test_request(cls, **kwargs):
+        """Create a test blood request with default values"""
+        from datetime import date, timedelta
+        
+        defaults = {
+            'user_id': 1,
+            'hospital_id': 1,
+            'blood_group_type': 1,
+            'no_of_units': 2,
+            'patient_name': 'Test Patient',
+            'patient_contact_email': 'test@example.com',
+            'patient_contact_phone_number': '+1234567890',
+            'required_by_date': date.today() + timedelta(days=7),
+            'description': 'Test blood request',
+            'status': 'pending',
+            'from_date': date.today()
+        }
+        
+        # Override defaults with provided kwargs
+        defaults.update(kwargs)
+        
+        return cls(**defaults)
+
 
 class BloodRequestResponse(db.Model):
     __tablename__ = 'blood_requests_responses'

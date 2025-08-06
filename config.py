@@ -9,13 +9,24 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
+    # 🔧 JWT Configuration fixes for token verification
+    JWT_ALGORITHM = 'HS256'
+    JWT_DECODE_AUDIENCE = None  # Allow any audience
+    JWT_VERIFY_SUB = False  # Don't strictly verify subject format
+    JWT_IDENTITY_CLAIM = 'sub'  # Standard claim name
+    JWT_ERROR_MESSAGE_KEY = 'message'  # Consistent error message key
+    
+    # Additional JWT settings to prevent verification failures
+    JWT_VERIFY_CLAIMS = ['signature', 'exp', 'iat']  # Only verify essential claims
+    JWT_REQUIRED_CLAIMS = ['exp', 'iat', 'sub']  # Required claims
+    
     # CORS settings
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:3000').split(',')
     
     # Database settings
     SQLALCHEMY_DATABASE_URI = os.getenv(
         'DATABASE_URL',
-        'postgresql://postgres:aswin@localhost:5432/donor_near_me'
+        'postgresql://postgres:aswin@localhost:5432/donornearme'
     )
     
     # Security settings
